@@ -90,7 +90,7 @@
     [self hnk_cancelSetImage];
     self.hnk_fetcher = fetcher;
     const BOOL didSetImage = [self hnk_fetchImageForFetcher:fetcher success:successBlock failure:failureBlock];
-    if (!didSetImage && placeholder != nil)
+    if (!didSetImage)
     {
         self.image = placeholder;
     }
