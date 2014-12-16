@@ -159,7 +159,7 @@
     else
     {
         if (animated) {
-            [UIView transitionWithView:self duration:0.1 options:UIViewAnimationOptionTransitionCrossDissolve animations:^{
+            [UIView transitionWithView:self duration:0.1 options:UIViewAnimationOptionTransitionCrossDissolve|UIViewAnimationOptionAllowUserInteraction animations:^{
                 self.image = image;
             } completion:nil];
         }
