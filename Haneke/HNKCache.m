@@ -174,6 +174,17 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         HanekeLog(@"Memory cache miss: %@/%@", formatName, key.lastPathComponent);
 
         cacheHit = [format.diskCache dataExistsForKey:key];
+        if (cacheHit && format.diskCacheLoadPolicy == HNKDiskCacheLoadPolicyBlockIfDataIsPresent) {
+            UIImage *image = [UIImage imageWithData:[format.diskCache fetchDataForKey:key]];
+            if (image) {
+                UIImage *decompressedImage = [image hnk_decompressedImage];
+                [self setMemoryImage:decompressedImage forKey:key format:format];
+                successBlock(decompressedImage);
+                
+                return cacheHit;
+            }
+            
+        }
     }
     
     [format.diskCache fetchDataForKey:key success:^(NSData *data) {

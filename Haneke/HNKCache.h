@@ -23,6 +23,8 @@
 @protocol HNKFetcher;
 @class HNKCacheFormat;
 
+#define HANEKE_DEBUG 0
+
 #if HANEKE_DEBUG
 #define HanekeLog(...) NSLog(@"HANEKE: %@", [NSString stringWithFormat:__VA_ARGS__]);
 #else
@@ -170,6 +172,12 @@ typedef NS_ENUM(NSInteger, HNKPreloadPolicy)
     HNKPreloadPolicyAll
 };
 
+typedef NS_ENUM(NSInteger, HNKDiskCacheLoadPolicy)
+{
+    HNKDiskCacheLoadPolicyNonBlocking,
+    HNKDiskCacheLoadPolicyBlockIfDataIsPresent
+};
+
 /**
  Image cache format. Defines the transformation applied to images as well as cache policies such as disk capacity.
  */
@@ -217,6 +225,11 @@ typedef NS_ENUM(NSInteger, HNKPreloadPolicy)
  Preload policy. If set, Haneke will add some or all images cached on disk to the memory cache. HNKPreloadPolicyNone by default.
  */
 @property (nonatomic, assign) HNKPreloadPolicy preloadPolicy;
+
+/**
+ Disk cache load policy. If set, Haneke will read the data from disk immediately on request loading in background. HNKCacheLoadPolicyNone by default.
+ */
+@property (nonatomic, assign) HNKDiskCacheLoadPolicy diskCacheLoadPolicy;
 
 /**
  Block to be called before an image is resized. The returned image will be resized. nil by default.

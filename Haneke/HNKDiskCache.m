@@ -78,6 +78,11 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     });
 }
 
+- (NSData *)fetchDataForKey:(NSString *)key
+{
+    return [NSData dataWithContentsOfFile:[self pathForKey:key]];
+}
+
 - (void)fetchDataForKey:(NSString*)key success:(void (^)(NSData *data))successBlock failure:(void (^)(NSError *error))failureBlock
 {
     dispatch_async(_queue, ^{

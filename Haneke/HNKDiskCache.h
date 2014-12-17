@@ -82,6 +82,11 @@
 
 - (BOOL)dataExistsForKey:(NSString *)key;
 
+/**
+ Loads data synchronously.
+ @param key Key associated with data.
+ */
+- (NSData *)fetchDataForKey:(NSString *)key;
 
 #pragma mark Removing data
 ///---------------------------------------------
