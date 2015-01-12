@@ -25,6 +25,18 @@
 
 #pragma mark Setting the content image
 
+/**
+ *  @return The HNKNetworkFetcher class to use for fetching network images.
+ */
++ (Class)networkFetcherClass;
+
+/**
+ *  Sets HNKNetworkFetcher class the other Haneke category methods will use for fetching network images.
+ *
+ *  @param networkFetcherClass The desired subclass of HNKNetworkFetcher to be used by the Haneke category methods.
+ */
++ (void)setNetworkFetcherClass:(Class)networkFetcherClass;
+
 /** Loads, resizes, displays and caches an appropiately sized foreground image from the given url.
  @param url URL from which the image will be loaded if it's not available in the cache.
  @param state Control state that will use the image.

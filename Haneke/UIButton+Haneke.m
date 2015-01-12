@@ -25,9 +25,24 @@
 #import "HNKNetworkFetcher.h"
 #import <objc/runtime.h>
 
+static Class __networkFetcherClass = nil;
+
 @implementation UIButton (Haneke)
 
 #pragma mark Setting the content image
+
++ (Class)networkFetcherClass {
+    return (__networkFetcherClass) ?: [HNKNetworkFetcher class];
+}
+
++ (void)setNetworkFetcherClass:(Class)networkFetcherClass {
+    if ([networkFetcherClass isSubclassOfClass:[HNKNetworkFetcher class]]) {
+        __networkFetcherClass = networkFetcherClass;
+    }
+    else {
+        NSAssert(0, @"Attempting to assign network fetcher class with class that does not subclass HNKNetworkFetcher (%@)", [HNKNetworkFetcher description]);
+    }
+}
 
 - (void)hnk_setImageFromURL:(NSURL*)URL forState:(UIControlState)state
 {
@@ -41,7 +56,7 @@
 
 - (void)hnk_setImageFromURL:(NSURL*)URL forState:(UIControlState)state placeholder:(UIImage*)placeholder success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock
 {
-    id<HNKFetcher> fetcher = [[HNKNetworkFetcher alloc] initWithURL:URL];
+    id<HNKFetcher> fetcher = [[[[self class] networkFetcherClass] alloc] initWithURL:URL];
     [self hnk_setImageFromFetcher:fetcher forState:state placeholder:placeholder success:successBlock failure:failureBlock];
 }
 

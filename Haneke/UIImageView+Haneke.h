@@ -23,6 +23,18 @@
 
 @interface UIImageView (Haneke)
 
+/**
+ *  @return The HNKNetworkFetcher class to use for fetching network images.
+ */
++ (Class)networkFetcherClass;
+
+/**
+ *  Sets HNKNetworkFetcher class the other Haneke category methods will use for fetching network images.
+ *
+ *  @param networkFetcherClass The desired subclass of HNKNetworkFetcher to be used by the Haneke category methods.
+ */
++ (void)setNetworkFetcherClass:(Class)networkFetcherClass;
+
 /** Loads, resizes, displays and caches an appropiately sized image from the given path.
  @param path Path from which the image will be loaded if it's not available in the cache.
  @see hnk_setImageFromFile:placeholder:success:failure:

@@ -25,7 +25,22 @@
 #import "UIView+Haneke.h"
 #import <objc/runtime.h>
 
+static Class __networkFetcherClass = nil;
+
 @implementation UIImageView (Haneke)
+
++ (Class)networkFetcherClass {
+    return (__networkFetcherClass) ?: [HNKNetworkFetcher class];
+}
+
++ (void)setNetworkFetcherClass:(Class)networkFetcherClass {
+    if ([networkFetcherClass isSubclassOfClass:[HNKNetworkFetcher class]]) {
+        __networkFetcherClass = networkFetcherClass;
+    }
+    else {
+        NSAssert(0, @"Attempting to assign network fetcher class with class that does not subclass HNKNetworkFetcher (%@)", [HNKNetworkFetcher description]);
+    }
+}
 
 - (void)hnk_setImageFromFile:(NSString*)path
 {
@@ -55,7 +70,7 @@
 
 - (void)hnk_setImageFromURL:(NSURL*)url placeholder:(UIImage*)placeholder success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock
 {
-    id<HNKFetcher> fetcher = [[HNKNetworkFetcher alloc] initWithURL:url];
+    id<HNKFetcher> fetcher = [[[[self class] networkFetcherClass] alloc] initWithURL:url];
     [self hnk_setImageFromFetcher:fetcher placeholder:placeholder success:successBlock failure:failureBlock];
 }
 
