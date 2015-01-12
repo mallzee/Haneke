@@ -158,8 +158,6 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
     NSAssert(format, @"Unknown format %@", formatName);
     format.requestCount++;
     
-    BOOL cacheHit = NO;
-    
     UIImage *image = [self memoryImageForKey:key format:format];
     if (image)
     {
@@ -168,12 +166,12 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         {
             successBlock(image);
         }
-        cacheHit = YES;
+        return YES;
     }
     else {
         HanekeLog(@"Memory cache miss: %@/%@", formatName, key.lastPathComponent);
 
-        cacheHit = [format.diskCache dataExistsForKey:key];
+        BOOL cacheHit = [format.diskCache dataExistsForKey:key];
         if (cacheHit && format.diskCacheLoadPolicy == HNKDiskCacheLoadPolicyBlockIfDataIsPresent) {
             UIImage *image = [UIImage imageWithData:[format.diskCache fetchDataForKey:key]];
             if (image) {
@@ -234,7 +232,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
             }
         }
     }];
-    return cacheHit;
+    return NO;
 }
 
 #pragma mark Setting images
