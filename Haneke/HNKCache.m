@@ -129,23 +129,23 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
             [self fetchImageFromFetcher:fetcher completionBlock:^(UIImage *originalImage, NSError *error) {
                 if (!originalImage)
                 {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (failureBlock) 
-                        {
-                            failureBlock(error);
-                        }
-                    });
+                    if (failureBlock)
+                    {
+                        failureBlock(error);
+                    }
                     return;
                 }
-                UIImage *image = [self imageFromOriginal:originalImage key:key format:format];
                 
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [self setMemoryImage:image forKey:key format:format];
-                    if (successBlock) 
-                    {
-                        successBlock(image);
-                    }
-                    [self setDiskImage:image forKey:key format:format];
+                hnk_enqueue_block(^() {
+                    UIImage *image = [self imageFromOriginal:originalImage key:key format:format];
+                    dispatch_async(dispatch_get_main_queue(), ^() {
+                        [self setMemoryImage:image forKey:key format:format];
+                        if (successBlock)
+                        {
+                            successBlock(image);
+                        }
+                        [self setDiskImage:image forKey:key format:format];
+                    });
                 });
             }];
         });
