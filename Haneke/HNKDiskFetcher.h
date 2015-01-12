@@ -39,6 +39,7 @@ enum
 
 /**
  Cancels the current fetch. When a fetch is cancelled it should not call any of the provided blocks.
+ This should not be called directly on an HNKFetcher instance. Instead call cancelFetchForFetcher:formatName: on HNKCache.
  @discussion This will be typically used by UI logic to cancel fetches during view reuse.
  */
 - (void)cancelFetch;

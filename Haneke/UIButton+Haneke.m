@@ -115,11 +115,7 @@ static Class __networkFetcherClass = nil;
 
 - (void)hnk_cancelSetImage
 {
-    id<HNKFetcher> fetcher = self.hnk_imageFetcher;
-    if ([fetcher respondsToSelector:@selector(cancelFetch)])
-    {
-        [fetcher cancelFetch];
-    }
+    [[HNKCache sharedCache] cancelFetchForFetcher:self.hnk_imageFetcher formatName:self.hnk_imageFormat.name];
     self.hnk_imageFetcher = nil;
 }
 
@@ -287,11 +283,7 @@ static Class __networkFetcherClass = nil;
 
 - (void)hnk_cancelSetBackgroundImage
 {
-    id<HNKFetcher> fetcher = self.hnk_backgroundImageFetcher;
-    if ([fetcher respondsToSelector:@selector(cancelFetch)])
-    {
-        [fetcher cancelFetch];
-    }
+    [[HNKCache sharedCache] cancelFetchForFetcher:self.hnk_backgroundImageFetcher formatName:self.hnk_backgroundImageFormat.name];
     self.hnk_backgroundImageFetcher = nil;
 }
 

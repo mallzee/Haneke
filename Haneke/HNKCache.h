@@ -82,6 +82,14 @@
 - (BOOL)fetchImageForFetcher:(id<HNKFetcher>)fetcher formatName:(NSString *)formatName success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock;
 
 /**
+ *  Cancels a previous image request made to fetchImageForFetcher:formatName:success:failure.
+ *
+ *  @param fetcher    Fetcher instance that was queued with fetchImageForFetcher:formatName:success:failure:.
+ *  @param formatName Name of the format that was used to queue fetcher with fetchImageForFetcher:formatName:success:failure.
+ */
+- (void)cancelFetchForFetcher:(id<HNKFetcher>)fetcher formatName:(NSString *)formatName;
+
+/**
  Retrieves an image from the cache. If the image exists in the memory cache, the success block will be executed synchronously. If the image has to be retreived from the disk cache, the success block will be executed asynchronously.
  @param key Image cache key.
  @param formatName Name of the format in which the image is desired. The format must have been previously registered with the cache.
@@ -151,6 +159,7 @@
 
 /**
  Cancels the current fetch. When a fetch is cancelled it should not call any of the provided blocks.
+ This should not be called directly on an HNKFetcher instance. Instead call cancelFetchForFetcher:formatName: on HNKCache.
  @discussion This will be typically used by UI logic to cancel fetches during view reuse.
  */
 - (void)cancelFetch;

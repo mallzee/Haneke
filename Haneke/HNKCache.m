@@ -20,6 +20,8 @@
 
 #import "HNKCache.h"
 #import "HNKDiskCache.h"
+#import "HNKFetcherConsolidator.h"
+#import "HNKFetcherWrapper.h"
 
 NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
@@ -49,6 +51,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 @property (nonatomic, readonly) NSString *rootDirectory;
 @property (nonatomic) NSOperationQueue *operationQueue;
+@property (nonatomic) NSMutableDictionary *fetcherConsolidatorDictionary;
 
 @end
 
@@ -74,6 +77,8 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         _rootDirectory = [path stringByAppendingPathComponent:name];
         _operationQueue = [[NSOperationQueue alloc] init];
         _operationQueue.maxConcurrentOperationCount = 5;
+        
+        _fetcherConsolidatorDictionary = [[NSMutableDictionary alloc] init];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didReceiveMemoryWarning:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
     }
@@ -119,37 +124,67 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 - (BOOL)fetchImageForFetcher:(id<HNKFetcher>)fetcher formatName:(NSString *)formatName success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock
 {
-    NSString *key = fetcher.key;
-    return [self fetchImageForKey:key formatName:formatName success:^(UIImage *image) {
-        if (successBlock) successBlock(image);
-    } failure:^(NSError *error) {
-        hnk_enqueue_block(^{
-            HNKCacheFormat *format = _formats[formatName];
-            
-            [self fetchImageFromFetcher:fetcher completionBlock:^(UIImage *originalImage, NSError *error) {
-                if (!originalImage)
-                {
-                    if (failureBlock)
-                    {
-                        failureBlock(error);
-                    }
-                    return;
-                }
+    NSString *uniqueKey = [HNKFetcherConsolidator uniqueKeyForFetcher:fetcher formatName:formatName];
+    HNKFetcherConsolidator *consolidator = self.fetcherConsolidatorDictionary[uniqueKey];
+    
+    if (consolidator)
+    {
+        [consolidator addFetchRequestWithFetcher:fetcher successBlock:successBlock failureBlock:failureBlock];
+    }
+    else
+    {
+        HNKFetcherWrapper *wrapper = [[HNKFetcherWrapper alloc] initWithFetcher:fetcher];
+        consolidator = [[HNKFetcherConsolidator alloc] initWithFetcher:wrapper];
+        [consolidator addFetchRequestWithFetcher:fetcher successBlock:successBlock failureBlock:failureBlock];
+        self.fetcherConsolidatorDictionary[uniqueKey] = consolidator;
+        
+        NSString *key = wrapper.key;
+        consolidator.cacheHit = [self fetchImageForKey:key formatName:formatName success:^(UIImage *image) {
+            [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+            [consolidator dispatchSuccessBlocksWithImage:image];
+        } failure:^(NSError *error) {
+            hnk_enqueue_block(^{
+                HNKCacheFormat *format = _formats[formatName];
                 
-                hnk_enqueue_block(^() {
-                    UIImage *image = [self imageFromOriginal:originalImage key:key format:format];
-                    dispatch_async(dispatch_get_main_queue(), ^() {
-                        [self setMemoryImage:image forKey:key format:format];
-                        if (successBlock)
-                        {
-                            successBlock(image);
-                        }
-                        [self setDiskImage:image forKey:key format:format];
+                [self fetchImageFromFetcher:wrapper completionBlock:^(UIImage *originalImage, NSError *error) {
+                    if (!originalImage)
+                    {
+                        [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+                        [consolidator dispatchFailureBlocksWithError:error];
+                        return;
+                    }
+                    
+                    hnk_enqueue_block(^() {
+                        UIImage *image = [self imageFromOriginal:originalImage key:key format:format];
+                        dispatch_async(dispatch_get_main_queue(), ^() {
+                            [self setMemoryImage:image forKey:key format:format];
+                            
+                            [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+                            [consolidator dispatchSuccessBlocksWithImage:image];
+                            
+                            [self setDiskImage:image forKey:key format:format];
+                        });
                     });
-                });
-            }];
-        });
-    }];
+                }];
+            });
+        }];
+    }
+    
+    return consolidator.cacheHit;
+}
+
+- (void)cancelFetchForFetcher:(id<HNKFetcher>)fetcher formatName:(NSString *)formatName
+{
+    NSString *uniqueKey = [HNKFetcherConsolidator uniqueKeyForFetcher:fetcher formatName:formatName];
+    HNKFetcherConsolidator *consolidator = self.fetcherConsolidatorDictionary[uniqueKey];
+    if (consolidator)
+    {
+        [consolidator removeFetchRequestWithFetcher:fetcher];
+        if (consolidator.cancelled)
+        {
+            [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+        }
+    }
 }
 
 - (BOOL)fetchImageForKey:(NSString*)key formatName:(NSString *)formatName success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock

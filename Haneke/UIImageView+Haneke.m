@@ -132,10 +132,7 @@ static Class __networkFetcherClass = nil;
 
 - (void)hnk_cancelSetImage
 {
-    if ([self.hnk_fetcher respondsToSelector:@selector(cancelFetch)])
-    {
-        [self.hnk_fetcher cancelFetch];
-    }
+    [[HNKCache sharedCache] cancelFetchForFetcher:self.hnk_fetcher formatName:self.hnk_cacheFormat.name];
     self.hnk_fetcher = nil;
 }
 
