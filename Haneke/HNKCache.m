@@ -206,17 +206,36 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
     else {
         HanekeLog(@"Memory cache miss: %@/%@", formatName, key.lastPathComponent);
 
-        BOOL cacheHit = [format.diskCache dataExistsForKey:key];
-        if (cacheHit && format.diskCacheLoadPolicy == HNKDiskCacheLoadPolicyBlockIfDataIsPresent) {
+        if ([format.diskCache dataExistsForKey:key]) {
             UIImage *image = [UIImage imageWithData:[format.diskCache fetchDataForKey:key]];
             if (image) {
-                UIImage *decompressedImage = [image hnk_decompressedImage];
-                [self setMemoryImage:decompressedImage forKey:key format:format];
-                successBlock(decompressedImage);
-                
-                return cacheHit;
+                switch (format.diskCacheLoadPolicy) {
+                    case HNKDiskCacheLoadPolicyNonBlocking: {
+                        hnk_enqueue_block( ^() {
+                            UIImage *decompressedImage = [image hnk_decompressedImage];
+                            dispatch_async(dispatch_get_main_queue(), ^{
+                                [self setMemoryImage:decompressedImage forKey:key format:format];
+                                if (successBlock)
+                                {
+                                    successBlock(decompressedImage);
+                                }
+                            });
+                        });
+                        break;
+                    }
+                        
+                    case HNKDiskCacheLoadPolicyBlockIfDataIsPresent: {
+                        UIImage *decompressedImage = [image hnk_decompressedImage];
+                        [self setMemoryImage:decompressedImage forKey:key format:format];
+                        if (successBlock)
+                        {
+                            successBlock(decompressedImage);
+                        }
+                        break;
+                    }
+                }
+                return YES;
             }
-            
         }
     }
     
