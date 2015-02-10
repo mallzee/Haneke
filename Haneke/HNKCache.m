@@ -225,11 +225,12 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
                     }
                         
                     case HNKDiskCacheLoadPolicyBlockIfDataIsPresent: {
-                        UIImage *decompressedImage = [image hnk_decompressedImage];
-                        [self setMemoryImage:decompressedImage forKey:key format:format];
+                        //NOTE(jforbes): don't bother decompressing the image, because we're returning the data
+                        //               immediately and shouldn't take the hit.
+                        [self setMemoryImage:image forKey:key format:format];
                         if (successBlock)
                         {
-                            successBlock(decompressedImage);
+                            successBlock(image);
                         }
                         break;
                     }
