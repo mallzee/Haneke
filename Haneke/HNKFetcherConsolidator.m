@@ -14,7 +14,6 @@
 @property (nonatomic) id<HNKFetcher> fetcher;
 @property (nonatomic, copy) void (^successBlock)(UIImage *);
 @property (nonatomic, copy) void (^failureBlock)(NSError *);
-
 @end
 
 @implementation HNKFetchRequest

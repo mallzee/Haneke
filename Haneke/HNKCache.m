@@ -38,6 +38,56 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 @end
 
+@interface HNKThreadSafeMutableDictionary : NSObject
+- (void)removeObjectForKey:(id)aKey;
+- (void)setObject:(id)anObject forKey:(id <NSCopying>)aKey;
+- (id)objectForKey:(id)aKey;
+
+@property (nonatomic) NSMutableDictionary *backingDictionary;
+@property (nonatomic) dispatch_queue_t dispatchQueue;
+@end
+
+@implementation HNKThreadSafeMutableDictionary
+
+- (id)init {
+    if (self = [super init]) {
+        _backingDictionary = [NSMutableDictionary dictionary];
+        _dispatchQueue = dispatch_queue_create("com.hpiqueue.haneke.dictionaryMutationQueue", DISPATCH_QUEUE_CONCURRENT);
+    }
+    return self;
+}
+
+- (void)removeObjectForKey:(id)aKey {
+    dispatch_barrier_sync(_dispatchQueue, ^{
+        [_backingDictionary removeObjectForKey:aKey];
+    });
+}
+
+- (void)setObject:(id)anObject forKey:(id <NSCopying>)aKey {
+    dispatch_barrier_sync(_dispatchQueue, ^{
+        _backingDictionary[aKey] = anObject;
+    });
+}
+
+- (id)objectForKey:(id)aKey {
+    __block id value = nil;
+    dispatch_sync(_dispatchQueue, ^{
+        value = _backingDictionary[aKey];
+    });
+    
+    return value;
+}
+
+- (id)objectForKeyedSubscript:(id <NSCopying>)key {
+    return [self objectForKey:key];
+}
+- (void)setObject:(id)obj forKeyedSubscript:(id <NSCopying>)key {
+    return [self setObject:obj forKey:key];
+}
+
+@end
+
+
 @interface HNKCacheFormat()
 
 @property (nonatomic, weak) HNKCache *cache;
@@ -51,7 +101,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 @property (nonatomic, readonly) NSString *rootDirectory;
 @property (nonatomic) NSOperationQueue *operationQueue;
-@property (nonatomic) NSMutableDictionary *fetcherConsolidatorDictionary;
+@property (nonatomic) HNKThreadSafeMutableDictionary *fetcherConsolidatorDictionary;
 
 @end
 
@@ -78,7 +128,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         _operationQueue = [[NSOperationQueue alloc] init];
         _operationQueue.maxConcurrentOperationCount = 5;
         
-        _fetcherConsolidatorDictionary = [[NSMutableDictionary alloc] init];
+        _fetcherConsolidatorDictionary = [[HNKThreadSafeMutableDictionary alloc] init];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didReceiveMemoryWarning:) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
     }
@@ -149,8 +199,10 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
                 [self fetchImageFromFetcher:wrapper completionBlock:^(UIImage *originalImage, NSError *error) {
                     if (!originalImage)
                     {
-                        [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
-                        [consolidator dispatchFailureBlocksWithError:error];
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+                            [consolidator dispatchFailureBlocksWithError:error];
+                        });
                         return;
                     }
                     
@@ -175,15 +227,23 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
 
 - (void)cancelFetchForFetcher:(id<HNKFetcher>)fetcher formatName:(NSString *)formatName
 {
-    NSString *uniqueKey = [HNKFetcherConsolidator uniqueKeyForFetcher:fetcher formatName:formatName];
-    HNKFetcherConsolidator *consolidator = self.fetcherConsolidatorDictionary[uniqueKey];
-    if (consolidator)
-    {
-        [consolidator removeFetchRequestWithFetcher:fetcher];
-        if (consolidator.cancelled)
+    dispatch_block_t cancelBlock = ^{
+        NSString *uniqueKey = [HNKFetcherConsolidator uniqueKeyForFetcher:fetcher formatName:formatName];
+        HNKFetcherConsolidator *consolidator = self.fetcherConsolidatorDictionary[uniqueKey];
+        if (consolidator)
         {
-            [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+            [consolidator removeFetchRequestWithFetcher:fetcher];
+            if (consolidator.cancelled)
+            {
+                [self.fetcherConsolidatorDictionary removeObjectForKey:uniqueKey];
+            }
         }
+    };
+    if ([NSThread isMainThread]) {
+        cancelBlock();
+    }
+    else {
+        dispatch_async(dispatch_get_main_queue(), cancelBlock);
     }
 }
 
