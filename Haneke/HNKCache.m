@@ -24,6 +24,7 @@
 #import "HNKFetcherWrapper.h"
 
 NSString *const HNKErrorDomain = @"com.hpique.haneke";
+NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
 
 #define hnk_enqueue_block(block) [_operationQueue addOperation:[NSBlockOperation blockOperationWithBlock:block]];
 
@@ -122,8 +123,7 @@ NSString *const HNKErrorDomain = @"com.hpique.haneke";
         _formats = [NSMutableDictionary dictionary];
         
         NSString *cachesDirectory = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) firstObject];
-        static NSString *cachePathComponent = @"com.hpique.haneke";
-        NSString *path = [cachesDirectory stringByAppendingPathComponent:cachePathComponent];
+        NSString *path = [cachesDirectory stringByAppendingPathComponent:kHanekeCacheRootPathComponent];
         _rootDirectory = [path stringByAppendingPathComponent:name];
         _operationQueue = [[NSOperationQueue alloc] init];
         _operationQueue.maxConcurrentOperationCount = 5;

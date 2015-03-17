@@ -31,6 +31,8 @@
 #define HanekeLog(...)
 #endif
 
+extern NSString *const kHanekeCacheRootPathComponent;
+
 /**
  A cache for images.
  */
