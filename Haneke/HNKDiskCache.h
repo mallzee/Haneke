@@ -68,12 +68,22 @@
 - (void)setData:(NSData*)data forKey:(NSString*)key;
 
 /**
- Fetches the data associated with the given key and updates its access date.
+ Fetches the data associated with the given key asynchronously and updates its access date.
  @param key Key associated with requested data.
  @param successBlock Block to be called with the requested data. Always called from the main queue.
  @param failureBlock Block to be called if there is no data associated with the given key or, less likely, if there is an error while reading the data. Always called from the main queue. If no data is found the error will be NSFileReadNoSuchFileError.
  */
 - (void)fetchDataForKey:(NSString*)key success:(void (^)(NSData *data))successBlock failure:(void (^)(NSError *error))failureBlock;
+
+/**
+ Fetches the data associated with the given key and updates its access date.
+ 
+ @param key Key associated with requested data.
+ @param asynchronously Whether or not this fetch should happen asynchrounsly or synchronously
+ @param successBlock Block to be called with the requested data. Always called from the main queue.
+ @param failureBlock Block to be called if there is no data associated with the given key or, less likely, if there is an error while reading the data. Always called from the main queue. If no data is found the error will be NSFileReadNoSuchFileError.
+ */
+- (void)fetchDataForKey:(NSString*)key asynchronously:(BOOL)asynchronously success:(void (^)(NSData *data))successBlock failure:(void (^)(NSError *error))failureBlock;
 
 /** 
  Checks the disk for data presence for a given key.
@@ -82,11 +92,6 @@
 
 - (BOOL)dataExistsForKey:(NSString *)key;
 
-/**
- Loads data synchronously.
- @param key Key associated with data.
- */
-- (NSData *)fetchDataForKey:(NSString *)key;
 
 #pragma mark Removing data
 ///---------------------------------------------

@@ -78,14 +78,14 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
     });
 }
 
-- (NSData *)fetchDataForKey:(NSString *)key
-{
-    return [NSData dataWithContentsOfFile:[self pathForKey:key]];
-}
-
 - (void)fetchDataForKey:(NSString*)key success:(void (^)(NSData *data))successBlock failure:(void (^)(NSError *error))failureBlock
 {
-    dispatch_async(_queue, ^{
+    [self fetchDataForKey:key asynchronously:YES success:successBlock failure:failureBlock];
+}
+
+- (void)fetchDataForKey:(NSString *)key asynchronously:(BOOL)asynchronously success:(void (^)(NSData *))successBlock failure:(void (^)(NSError *))failureBlock
+{
+    dispatch_block_t fetchBlock = ^{
         NSString *path = [self pathForKey:key];
         NSError *error = nil;
         NSData *data = [NSData dataWithContentsOfFile:path options:kNilOptions error:&error];
@@ -93,20 +93,38 @@ NSString *const HNKExtendedFileAttributeKey = @"io.haneke.key";
         {
             if (failureBlock)
             {
-                dispatch_async(dispatch_get_main_queue(), ^{
+                if (asynchronously) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        failureBlock(error);
+                    });
+                }
+                else {
                     failureBlock(error);
-                });
+                }
             }
             return;
         }
         
         if (successBlock)
         {
-            dispatch_async(dispatch_get_main_queue(), ^{
+            if (asynchronously) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    successBlock(data);
+                });
+            }
+            else {
                 successBlock(data);
-            });
+            }
+            
         }
-    });
+    };
+    
+    if (asynchronously) {
+        dispatch_async(_queue, fetchBlock);
+    }
+    else {
+        fetchBlock();
+    }
 }
 
 - (BOOL)dataExistsForKey:(NSString *)key {

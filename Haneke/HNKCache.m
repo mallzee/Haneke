@@ -247,7 +247,7 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
     }
 }
 
-- (BOOL)fetchImageForKey:(NSString*)key formatName:(NSString *)formatName success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock
+- (BOOL)fetchImageForKey:(NSString *)key formatName:(NSString *)formatName success:(void (^)(UIImage *image))successBlock failure:(void (^)(NSError *error))failureBlock
 {
     HNKCacheFormat *format = _formats[formatName];
     NSAssert(format, @"Unknown format %@", formatName);
@@ -264,90 +264,88 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
         return YES;
     }
     else {
-        HanekeLog(@"Memory cache miss: %@/%@", formatName, key.lastPathComponent);
-
-        if ([format.diskCache dataExistsForKey:key]) {
-            UIImage *image = [UIImage imageWithData:[format.diskCache fetchDataForKey:key]];
-            if (image) {
-                switch (format.diskCacheLoadPolicy) {
-                    case HNKDiskCacheLoadPolicyNonBlocking: {
-                        hnk_enqueue_block( ^() {
-                            UIImage *decompressedImage = [image hnk_decompressedImage];
-                            dispatch_async(dispatch_get_main_queue(), ^{
-                                [self setMemoryImage:decompressedImage forKey:key format:format];
-                                if (successBlock)
-                                {
-                                    successBlock(decompressedImage);
-                                }
-                            });
-                        });
-                        break;
-                    }
-                        
-                    case HNKDiskCacheLoadPolicyBlockIfDataIsPresent: {
-                        //NOTE(jforbes): don't bother decompressing the image, because we're returning the data
+        BOOL async = (format.diskCacheLoadPolicy == HNKDiskCacheLoadPolicyNonBlocking);
+        
+        [format.diskCache fetchDataForKey:key asynchronously:async success:^(NSData *data) {
+            
+            void (^handleDataFetchSuccessBlock)() = ^() {
+                UIImage *image = [UIImage imageWithData:data];
+                if (image) {
+                    if (async) {
+                        //NOTE(jforbes): don't bother decompressing the image if not async, because we're returning the data
                         //               immediately and shouldn't take the hit.
+                        image = [image hnk_decompressedImage];
+                    }
+                    
+                    dispatch_block_t setMemoryImageAndReturnBlock = ^() {
                         [self setMemoryImage:image forKey:key format:format];
-                        if (successBlock)
+                        if (successBlock) 
                         {
                             successBlock(image);
                         }
-                        break;
+                    };
+                    
+                    if (async) {
+                        dispatch_async(dispatch_get_main_queue(), setMemoryImageAndReturnBlock);
+                    }
+                    else {
+                        setMemoryImageAndReturnBlock();
                     }
                 }
-                return YES;
-            }
-        }
-    }
-    
-    [format.diskCache fetchDataForKey:key success:^(NSData *data) {
-        HanekeLog(@"Disk cache hit: %@/%@", formatName, key.lastPathComponent);
-        hnk_enqueue_block( ^() {
-            UIImage *image = [UIImage imageWithData:data];
-            if (image) {
-                UIImage *decompressedImage = [image hnk_decompressedImage];
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [self setMemoryImage:decompressedImage forKey:key format:format];
-                    if (successBlock) 
-                    {
-                        successBlock(decompressedImage);
+                
+                else {
+                    dispatch_block_t handleCannotReadImageBlock = ^() {
+                        NSString *errorDescription = [NSString stringWithFormat:NSLocalizedString(@"Disk cache: Cannot read image for key %@", @""), key.lastPathComponent];
+                        HanekeLog(@"%@", errorDescription);
+                        NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : errorDescription};
+                        NSError *error = [NSError errorWithDomain:HNKErrorDomain code:HNKErrorDiskCacheCannotReadImageFromData userInfo:userInfo];
+                        if (failureBlock) 
+                        {
+                            failureBlock(error);
+                        }
+                    };
+                    
+                    if (async) {
+                        dispatch_async(dispatch_get_main_queue(), handleCannotReadImageBlock);
                     }
-                });
+                    else {
+                        handleCannotReadImageBlock();
+                    }
+                }
+            };
+            
+            HanekeLog(@"Disk cache hit: %@/%@", formatName, key.lastPathComponent);
+            if (async) {
+                hnk_enqueue_block(handleDataFetchSuccessBlock);
             }
             else {
-                dispatch_async(dispatch_get_main_queue(), ^() {
-                    NSString *errorDescription = [NSString stringWithFormat:NSLocalizedString(@"Disk cache: Cannot read image for key %@", @""), key.lastPathComponent];
-                    HanekeLog(@"%@", errorDescription);
-                    NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : errorDescription};
-                    NSError *error = [NSError errorWithDomain:HNKErrorDomain code:HNKErrorDiskCacheCannotReadImageFromData userInfo:userInfo];
-                    if (failureBlock) 
-                    {
-                        failureBlock(error);
-                    }
-                });
+                handleDataFetchSuccessBlock();
             }
-        });
-    } failure:^(NSError *error) {
-        if (error.code == NSFileReadNoSuchFileError)
-        {
-            HanekeLog(@"Disk cache miss: %@/%@", formatName, key.lastPathComponent);
-            NSString *errorDescription = [NSString stringWithFormat:NSLocalizedString(@"Image not found for key %@", @""), key.lastPathComponent];
-            NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : errorDescription };
-            NSError *error = [NSError errorWithDomain:HNKErrorDomain code:HNKErrorImageNotFound userInfo:userInfo];
-            if (failureBlock) 
+            
+        } failure:^(NSError *error) {
+            if (error.code == NSFileReadNoSuchFileError)
             {
-                failureBlock(error);
+                HanekeLog(@"Disk cache miss: %@/%@", formatName, key.lastPathComponent);
+                NSString *errorDescription = [NSString stringWithFormat:NSLocalizedString(@"Image not found for key %@", @""), key.lastPathComponent];
+                NSDictionary *userInfo = @{ NSLocalizedDescriptionKey : errorDescription };
+                NSError *error = [NSError errorWithDomain:HNKErrorDomain code:HNKErrorImageNotFound userInfo:userInfo];
+                if (failureBlock) 
+                {
+                    failureBlock(error);
+                }
             }
-        }
-        else
-        {
-            if (failureBlock) 
+            else
             {
-                failureBlock(error);
+                if (failureBlock) 
+                {
+                    failureBlock(error);
+                }
             }
-        }
-    }];
-    return NO;
+        }];
+        return NO;
+    }
+    
+    
 }
 
 #pragma mark Setting images
