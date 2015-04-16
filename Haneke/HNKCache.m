@@ -266,7 +266,11 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
     else {
         BOOL async = (format.diskCacheLoadPolicy == HNKDiskCacheLoadPolicyNonBlocking);
         
+        __block BOOL onDisk = NO;
         [format.diskCache fetchDataForKey:key asynchronously:async success:^(NSData *data) {
+            if (!async) {
+                onDisk = YES;
+            }
             
             void (^handleDataFetchSuccessBlock)() = ^() {
                 UIImage *image = [UIImage imageWithData:data];
@@ -342,7 +346,7 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
                 }
             }
         }];
-        return NO;
+        return onDisk;
     }
     
     
