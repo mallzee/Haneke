@@ -35,6 +35,7 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
 - (NSData*)hnk_dataWithCompressionQuality:(CGFloat)compressionQuality;
 - (UIImage *)hnk_decompressedImage;
 - (UIImage *)hnk_imageByScalingToSize:(CGSize)newSize;
+- (UIImage *)hnk_imageByCenteringToSize:(CGSize)newSize;
 - (BOOL)hnk_hasAlpha;
 
 @end
@@ -550,6 +551,9 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
         case HNKScaleModeFill:
             resizedSize = formatSize;
             break;
+        case HNKScaleModeCenter:
+            resizedSize = formatSize;
+            break;
         case HNKScaleModeNone:
             return originalImage;
     }
@@ -565,7 +569,14 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
     {
         return originalImage;
     }
-    UIImage *image = [originalImage hnk_imageByScalingToSize:resizedSize];
+    
+    UIImage *image = nil;
+    if (self.scaleMode == HNKScaleModeCenter) {
+        image = [originalImage hnk_imageByCenteringToSize:resizedSize];
+    }
+    else {
+        image = [originalImage hnk_imageByScalingToSize:resizedSize];
+    }
     return image;
 }
 
@@ -712,6 +723,26 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
     const BOOL hasAlpha = [self hnk_hasAlpha];
     UIGraphicsBeginImageContextWithOptions(newSize, !hasAlpha, 0.0);
     [self drawInRect:CGRectMake(0, 0, newSize.width, newSize.height)];
+    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return newImage;
+}
+
+- (UIImage *)hnk_imageByCenteringToSize:(CGSize)newSize
+{
+    
+    CGFloat mainScreenScale = [UIScreen mainScreen].scale;
+    CGFloat scaleConversion = self.scale / mainScreenScale;
+    CGSize ourSizeInScreenScale = CGSizeMake(self.size.width * scaleConversion, 
+                                             self.size.height * scaleConversion);
+    
+    const BOOL hasAlpha = [self hnk_hasAlpha];
+    UIGraphicsBeginImageContextWithOptions(newSize, !hasAlpha, 0.0);
+
+    [self drawInRect:CGRectMake((newSize.width - ourSizeInScreenScale.width) / 2, 
+                                (newSize.height - ourSizeInScreenScale.height) / 2, 
+                                ourSizeInScreenScale.width, 
+                                ourSizeInScreenScale.height)];
     UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return newImage;
