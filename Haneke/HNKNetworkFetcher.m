@@ -85,12 +85,12 @@
         }
         
         const long long expectedContentLength = response.expectedContentLength;
+        _dataLength = data.length;
         if (expectedContentLength > -1)
         {
-            const NSUInteger dataLength = data.length;
-            if (dataLength < expectedContentLength)
+            if (_dataLength < expectedContentLength)
             {
-                NSString *errorDescription = [NSString stringWithFormat:NSLocalizedString(@"Request %@ received %ld out of %ld bytes", @""), URL.absoluteString, (long)dataLength, (long)expectedContentLength];
+                NSString *errorDescription = [NSString stringWithFormat:NSLocalizedString(@"Request %@ received %ld out of %ld bytes", @""), URL.absoluteString, (long)_dataLength, (long)expectedContentLength];
                 [strongSelf failWithLocalizedDescription:errorDescription code:HNKErrorNetworkFetcherMissingData block:failureBlock];
                 return;
             }

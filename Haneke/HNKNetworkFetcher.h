@@ -46,8 +46,14 @@ enum
 
 /**
  The time it took to fetch the URL, or the time the fetch has been running if it is currently in-progress.
+ Useful for analytics purposes.
  */
 @property (nonatomic, readonly) NSTimeInterval duration;
+
+/**
+ The size of the response data. Useful for analytics purposes.
+ */
+@property (nonatomic, readonly) NSUInteger dataLength;
 
 /**
  Cancels the current fetch. When a fetch is cancelled it should not call any of the provided blocks.
