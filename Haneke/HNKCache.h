@@ -126,6 +126,11 @@ extern NSString *const kHanekeCacheRootPathComponent;
  */
 - (void)removeAllImages;
 
+/**
+ Removes all cached images for currently registered formats.
+ */
+- (void)removeAllImagesForRegisteredFormats;
+
 /** Removes all cached images of the given format.
  @param formatName Name of the format whose images will be removed.
  */

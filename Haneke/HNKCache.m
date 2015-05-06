@@ -375,7 +375,19 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
     [format.diskCache removeAllData];
 }
 
-- (void)removeAllImages
+- (void)removeAllImages {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSArray *allFilenames = [fileManager contentsOfDirectoryAtPath:_rootDirectory error:nil];
+    for (NSString *filename in allFilenames)  {
+        NSError *error = nil;
+        BOOL removedFile = [fileManager removeItemAtPath:[_rootDirectory stringByAppendingPathComponent:filename] error:&error];
+        if (!removedFile) {
+            FSLogError(kFSLogTagImages, @"Couldn't drop image cache: %@", error);
+        }
+    }
+}
+
+- (void)removeAllImagesForRegisteredFormats
 {
     [self.formats enumerateKeysAndObjectsUsingBlock:^(NSString *name, id obj, BOOL *stop)
      {
