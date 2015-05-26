@@ -109,6 +109,11 @@
  */
 - (void)removeAllData;
 
+/**
+ Recalculate the cache size from disk
+ */
+- (void)calculateSize;
+
 #pragma mark Managing data by access date
 ///---------------------------------------------
 /// @name Managing data by access date

@@ -385,6 +385,14 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
             FSLogError(kFSLogTagImages, @"Couldn't drop image cache: %@", error);
         }
     }
+    
+    for (NSCache *memoryCache in  [_memoryCaches allValues]) {
+        [memoryCache removeAllObjects];
+    }
+    
+    for (HNKCacheFormat *format in [_formats allValues]) {
+        [format.diskCache calculateSize];
+    }
 }
 
 - (void)removeAllImagesForRegisteredFormats
