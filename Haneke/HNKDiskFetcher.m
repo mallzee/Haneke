@@ -25,6 +25,17 @@
     BOOL _cancelled;
 }
 
++ (NSOperationQueue *)operationQueue {
+    static dispatch_once_t onceToken;
+    static NSOperationQueue *__fetcherQueue = nil;
+    dispatch_once(&onceToken, ^{
+        __fetcherQueue = [[NSOperationQueue alloc] init];
+        __fetcherQueue.maxConcurrentOperationCount = 2;
+    });
+    
+    return __fetcherQueue;
+}
+
 - (instancetype)initWithPath:(NSString*)path
 {
     if (self = [super init])
@@ -43,11 +54,12 @@
 {
     _cancelled = NO;
     __weak __typeof__(self) weakSelf = self;
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    
+    [[[self class] operationQueue] addOperation:[NSBlockOperation blockOperationWithBlock:^{
         __strong __typeof__(weakSelf) strongSelf = weakSelf;
-
+        
         if (!strongSelf) return;
-
+        
         if (strongSelf->_cancelled) return;
         
         NSString *path = strongSelf->_path;
@@ -84,7 +96,7 @@
             
             successBlock(image);
         });
-    });
+    }]];
 }
 
 - (void)cancelFetch
