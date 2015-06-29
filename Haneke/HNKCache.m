@@ -40,6 +40,56 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
 
 @end
 
+@interface HNKThreadSafeMutableDictionary : NSObject
+- (void)removeObjectForKey:(id)aKey;
+- (void)setObject:(id)anObject forKey:(id <NSCopying>)aKey;
+- (id)objectForKey:(id)aKey;
+
+@property (nonatomic) NSMutableDictionary *backingDictionary;
+@property (nonatomic) dispatch_queue_t dispatchQueue;
+@end
+
+@implementation HNKThreadSafeMutableDictionary
+
+- (id)init {
+    if (self = [super init]) {
+        _backingDictionary = [NSMutableDictionary dictionary];
+        _dispatchQueue = dispatch_queue_create("com.hpiqueue.haneke.dictionaryMutationQueue", DISPATCH_QUEUE_CONCURRENT);
+    }
+    return self;
+}
+
+- (void)removeObjectForKey:(id)aKey {
+    dispatch_barrier_sync(_dispatchQueue, ^{
+        [_backingDictionary removeObjectForKey:aKey];
+    });
+}
+
+- (void)setObject:(id)anObject forKey:(id <NSCopying>)aKey {
+    dispatch_barrier_sync(_dispatchQueue, ^{
+        _backingDictionary[aKey] = anObject;
+    });
+}
+
+- (id)objectForKey:(id)aKey {
+    __block id value = nil;
+    dispatch_sync(_dispatchQueue, ^{
+        value = _backingDictionary[aKey];
+    });
+    
+    return value;
+}
+
+- (id)objectForKeyedSubscript:(id <NSCopying>)key {
+    return [self objectForKey:key];
+}
+- (void)setObject:(id)obj forKeyedSubscript:(id <NSCopying>)key {
+    return [self setObject:obj forKey:key];
+}
+
+@end
+
+
 @interface HNKCacheFormat()
 
 @property (nonatomic, weak) HNKCache *cache;
