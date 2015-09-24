@@ -364,6 +364,13 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
     [self setDiskImage:image forKey:key format:format];
 }
 
+- (void)setImageInMemoryOnly:(UIImage*)image forKey:(NSString*)key formatName:(NSString*)formatName {
+    HNKCacheFormat *format = _formats[formatName];
+    NSAssert(format, @"Unknown format %@", formatName);
+    
+    [self setMemoryImage:image forKey:key format:format];
+}
+
 #pragma mark Removing images
 
 - (void)removeImagesOfFormatNamed:(NSString*)formatName

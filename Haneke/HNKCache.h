@@ -116,6 +116,8 @@ extern NSString *const kHanekeCacheRootPathComponent;
  */
 - (void)setImage:(UIImage*)image forKey:(NSString*)key formatName:(NSString*)formatName;
 
+- (void)setImageInMemoryOnly:(UIImage*)image forKey:(NSString*)key formatName:(NSString*)formatName;
+
 #pragma mark Removing images
 ///---------------------------------------------
 /// @name Removing images
