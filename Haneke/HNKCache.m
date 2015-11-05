@@ -389,7 +389,7 @@ NSString *const kHanekeCacheRootPathComponent = @"com.hpique.haneke";
         NSError *error = nil;
         BOOL removedFile = [fileManager removeItemAtPath:[_rootDirectory stringByAppendingPathComponent:filename] error:&error];
         if (!removedFile) {
-            FSLogError(kFSLogTagImages, @"Couldn't drop image cache: %@", error);
+            // FSLogError(kFSLogTagImages, @"Couldn't drop image cache: %@", error);
         }
     }
     
